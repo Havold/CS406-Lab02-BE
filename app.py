@@ -5,8 +5,10 @@ import numpy as np
 import json
 from werkzeug.utils import secure_filename
 from scipy.spatial import distance
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 UPLOAD_FOLDER = './uploads'
 IMAGE_FOLDER = './images/seg'  # Thư mục chứa 12000 ảnh trên server
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -15,8 +17,8 @@ app.config['IMAGE_FOLDER'] = IMAGE_FOLDER
 def calculate_histogram(filepath):
     image = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
     # Tính histogram
-    equalized_image = cv2.equalizeHist(image)
-    hist = cv2.calcHist(equalized_image, [0], None, [256], [0,255]).flatten()
+    # equalized_image = cv2.equalizeHist(image)
+    hist = cv2.calcHist([image], [0], None, [256], [0,255]).flatten()
     return hist
 
 @app.route('/', methods=['GET'])

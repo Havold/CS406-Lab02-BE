@@ -14,10 +14,11 @@ IMAGE_FOLDER = './images/seg'  # Thư mục chứa 12000 ảnh trên server
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['IMAGE_FOLDER'] = IMAGE_FOLDER
 
-def calculate_histogram(filepath):
+def calculate_histogram(filepath, use_equalized):
     image = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
     # Tính histogram
-    # equalized_image = cv2.equalizeHist(image)
+    if (use_equalized == True):
+        image = cv2.equalizeHist(image)
     hist = cv2.calcHist([image], [0], None, [256], [0,255]).flatten()
     return hist
 
@@ -45,11 +46,24 @@ def upload_image():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    # Calculate histogram of the uploaded image
-    uploaded_hist = calculate_histogram(filepath)
+    use_equalized = request.args.get('equalized').lower() == 'true'
+    top = request.args.get('top')
+    if (top):
+        top = int(top)
 
-    with open('histograms.json', 'r') as file:
+    # Calculate histogram of the uploaded image
+    uploaded_hist = calculate_histogram(filepath, use_equalized)
+
+    if (use_equalized == True):
+        json_name = 'histograms_equalized.json'
+    else:
+        json_name = 'histograms.json'
+
+    with open(json_name, 'r') as file:
         hist_data = json.load(file)
+
+    print(use_equalized)
+    print(json_name)
 
     # Compare uploaded histogram with stored histograms and calculate distances
     distances = []
@@ -60,7 +74,7 @@ def upload_image():
 
     # Sort by distance and select top 10 similar images
     distances.sort(key = lambda x: x[2])
-    top10 = distances[:10]
+    topFilter = distances[:top]
 
     # Send back the result to the frontend with image URLs
     similar_images = [
@@ -70,7 +84,7 @@ def upload_image():
             'distance': d[2],
             'image_url': f'/image/{d[0]}/{d[1]}'
         }
-        for d in top10
+        for d in topFilter
     ]
 
     return jsonify({'similarImages': similar_images})
